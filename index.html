@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Synth Tangga</title>
+<link href="https://fonts.googleapis.com/css2?family=Winky+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--panel:#ffffff;--card:#f4f6fc;--line:rgba(60,80,140,.18);--text:#1b2340;--muted:#5b6785;--accent:#e8890c;--hand:#0fa896;--pink:#e0407a;
+--display:'Winky Sans',system-ui,sans-serif;--mono:var(--display);color-scheme:light}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1000px 600px at 15% -10%,#e6f1ff 0,transparent 60%),radial-gradient(800px 500px at 100% 100%,#ffeef5 0,transparent 55%),#fff;color:var(--text);font:700 18px/1.25 var(--display)}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:100dvh}
+.stage{position:relative;overflow:hidden;background:#f1f4fb;touch-action:none;min-width:0;margin:12px 0 12px 12px;border-radius:20px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(50,70,140,.18)}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.8}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.chip{position:absolute;left:14px;top:14px;max-width:calc(100% - 28px);font:700 15px var(--mono);background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:6px 14px 6px 28px}
+.chip:before{content:"";position:absolute;left:12px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--hand);box-shadow:0 0 10px var(--hand)}
+.legend{position:absolute;left:14px;bottom:12px;right:14px;font:700 14px var(--mono);color:var(--muted);pointer-events:none;text-shadow:0 1px 6px #fff}
+.stage.cam .legend{color:#fff;text-shadow:0 1px 4px #000,0 0 8px rgba(0,0,0,.7)}
+.stage.cam .chip{background:rgba(20,28,50,.6);color:#fff;border-color:rgba(255,255,255,.3)}
+.overlay{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(600px 400px at 50% 40%,rgba(255,205,230,.55),rgba(255,255,255,.96));padding:20px;text-align:center;z-index:2;overflow:auto}
+.overlay .box{max-width:520px;width:100%;display:grid;gap:16px;justify-items:center}
+.overlay h1{font-size:58px;margin:0;letter-spacing:0;background:linear-gradient(90deg,var(--hand),var(--accent),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.overlay p{margin:0;color:var(--muted)}
+.overlay .msg{color:var(--accent);min-height:1.4em;font-size:16px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+details{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+summary{cursor:pointer;padding:8px 12px;color:var(--muted);font-size:15px}
+details pre{margin:0;padding:0 12px 10px;font:700 14px/1.5 var(--mono);white-space:pre-wrap}
+details .small{margin:0 12px 12px}
+button{font:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--hand);outline-offset:2px}
+.primary{background:linear-gradient(135deg,#ffc857,#ff9f5a);color:#1a1405;border:0;border-radius:12px;padding:12px 20px;font-weight:700;box-shadow:0 8px 24px rgba(255,170,80,.3)}
+.primary:hover{transform:translateY(-2px)}
+.ghost{background:rgba(40,60,130,.05);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 20px}
+.ghost:hover{background:rgba(40,60,130,.1)}
+.small{padding:7px 12px;font-size:15px}
+.panel{overflow:auto;padding:20px 18px 32px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-size:27px;margin:0;letter-spacing:0}
+.panel h3{font-size:15px;margin:6px 0 0;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.panel p{margin:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;backdrop-filter:blur(10px);display:grid;gap:10px;box-shadow:0 6px 20px rgba(50,70,140,.08)}
+.readout{display:flex;align-items:center;gap:14px}
+.readout .note{font:700 61px/1 var(--display);min-width:2.4ch;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.readout .info{font:700 15px var(--mono);color:var(--muted)}
+.eq{font:700 17px/1.5 var(--mono);background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px}
+.live{font:700 16px/1.4 var(--mono);color:var(--hand);overflow-wrap:anywhere;min-height:5.6em;white-space:pre-line}
+.pieces{font:700 16px/1.4 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;max-height:220px}
+.pieces .pr{display:grid;grid-template-columns:3.6em 1fr;gap:6px;padding:0 4px;border-radius:6px}
+.pieces .pr.on{color:var(--accent);background:rgba(232,137,12,.1)}
+.plot{width:100%;aspect-ratio:7/4;display:block;background:var(--card);border:1px solid var(--line);border-radius:10px}
+.cap{font-size:16px;color:var(--muted)}
+.row{display:grid;gap:6px}
+.row label{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.row output{font:700 14px var(--mono);color:var(--text);text-transform:none;letter-spacing:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select{font-weight:700;font-size:16px;width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;background:none;color:var(--muted);border:0;padding:9px 4px;font-size:16px}
+.seg button[aria-pressed=true]{background:linear-gradient(135deg,#ffc857,#ff9f5a);color:#1a1405;font-weight:700}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:56dvh minmax(0,1fr)}
+  .stage{margin:8px 8px 0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="stage" id="stage">
+    <video id="cam" playsinline muted></video>
+    <canvas id="fx"></canvas>
+    <div class="chip" id="status" role="status" aria-live="polite">Belum mulai</div>
+    <div class="legend">naik-turun = ganti nada · kepalkan tangan = hening, pindah, lalu buka lagi</div>
+    <div class="overlay" id="intro">
+      <div class="box">
+        <h1>Synth Tangga</h1>
+        <p>Gerakkan tangan naik dan turun di depan kamera. Tinggi tangan dibagi menjadi anak tangga, dan setiap anak tangga membunyikan satu nada.</p>
+        <div class="actions">
+          <button class="primary" id="startCam">Mulai dengan kamera</button>
+          <button class="ghost" id="startPtr">Pakai mouse atau sentuh</button>
+        </div>
+        <p class="msg" id="introMsg" aria-live="polite"></p>
+        <details id="diagBox">
+          <summary>Diagnosis kamera</summary>
+          <pre id="diag">memeriksa…</pre>
+          <button class="ghost small" id="diagBtn">Cek ulang</button>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel">
+    <h2>Fungsi tangga</h2>
+    <div class="card readout">
+      <div class="note" id="readNote">—</div>
+      <div class="info" id="readInfo">angkat tangan untuk mulai</div>
+    </div>
+
+    <div class="card">
+      <p><b>h</b> = tinggi tangan (0 paling bawah, 1 paling atas). <b>f(h)</b> = nada yang bunyi. Setiap rentang h punya satu nada tetap, jadi grafiknya berbentuk tangga:</p>
+      <div class="pieces" id="pieces"></div>
+      <p class="cap">Huruf di kiri adalah nada yang bunyi (C = Do, D = Re, E = Mi, F = Fa, G = Sol, A = La, B = Si). Kalau memilih akor, itu nama akornya (m = minor, dim = menyempit). Baris yang menyala adalah posisi tanganmu sekarang.</p>
+    </div>
+
+    <div class="card"><div class="live" id="live"></div></div>
+
+    <div class="card">
+      <canvas class="plot" id="plot" aria-label="Grafik fungsi tangga: nada f terhadap tinggi tangan h"></canvas>
+      <p class="cap">Garis kuning: fungsi tangga. Putus-putus: kalau nada naik mulus tanpa tangga. Titik hijau: posisi tanganmu. Ada penahan kecil di tepi anak tangga supaya nada tidak bergetar.</p>
+    </div>
+
+    <h3>Kontrol</h3>
+    <div class="card">
+      <div class="seg" role="group" aria-label="Mode kontrol">
+        <button id="modeCam" aria-pressed="false">Kamera</button>
+        <button id="modePtr" aria-pressed="false">Mouse / sentuh</button>
+      </div>
+      <div class="two">
+        <div class="row"><label for="tracker">Pelacak kamera</label>
+          <select id="tracker"><option value="hands">Tangan (MediaPipe)</option><option value="motion">Gerak (tanpa pustaka)</option></select></div>
+        <div class="row" id="camRow" hidden><label for="camdev">Kamera</label><select id="camdev"></select></div>
+      </div>
+      <div class="row"><label for="fist">Telapak ditutup (dikepal)</label>
+        <select id="fist"><option value="1">Suara mati &amp; nada dikunci</option><option value="0">Abaikan (tidak berpengaruh)</option></select></div>
+      <div class="row"><label for="play">Bunyi per tangga</label>
+        <select id="play"><option value="single">Nada tunggal (C, D, E, …)</option><option value="major">Akor mayor</option><option value="minor">Akor minor</option><option value="auto">Akor otomatis (sesuai tangga nada)</option></select></div>
+      <div class="two">
+        <div class="row"><label for="scale">Tangga nada</label><select id="scale"></select></div>
+        <div class="row"><label for="root">Nada dasar</label><select id="root"></select></div>
+      </div>
+      <div class="row"><label for="octs">Rentang <output id="octsOut"></output></label>
+        <input type="range" id="octs" min="1" max="4" step="1" value="1"></div>
+      <div class="two">
+        <div class="row"><label for="wave">Gelombang</label>
+          <select id="wave"><option value="sawtooth">Gergaji</option><option value="square">Kotak</option><option value="triangle">Segitiga</option><option value="sine">Sinus</option></select></div>
+        <div class="row"><label for="vol">Volume <output id="volOut"></output></label>
+          <input type="range" id="vol" min="0" max="100" step="1" value="60"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const NOTE = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const SCALES = {
+  'Pentatonik minor':[0,3,5,7,10],'Pentatonik mayor':[0,2,4,7,9],'Mayor':[0,2,4,5,7,9,11],
+  'Minor natural':[0,2,3,5,7,8,10],'Dorian':[0,2,3,5,7,9,10],'Blues':[0,3,5,6,7,10],
+  'Whole tone':[0,2,4,6,8,10],'Pelog (perkiraan)':[0,1,3,7,8],'Slendro (perkiraan)':[0,2,5,7,9],
+  'Kromatik':[0,1,2,3,4,5,6,7,8,9,10,11]
+};
+const S = {scale:'Mayor', root:0, octs:1, wave:'triangle', vol:60, play:'single', mode:null, tracker:'hands', fist:true};
+const STAB = 0.10, GLIDE_MS = 10;
+const nm = m => NOTE[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+const base = () => 60 + S.root;
+function chordFor(m){
+  if(S.play === 'single') return [0];
+  if(S.play === 'major') return [0, 4, 7];
+  if(S.play === 'minor') return [0, 3, 7];
+  const pcs = new Set(SCALES[S.scale]), r = ((m - base()) % 12 + 12) % 12, has = x => pcs.has((r + x) % 12);
+  return [0, has(4) ? 4 : (has(3) ? 3 : 4), has(7) ? 7 : (has(6) ? 6 : 7)];
+}
+function chordName(m){
+  const iv = chordFor(m);
+  if(iv.length === 1) return nm(m);
+  return NOTE[((m % 12) + 12) % 12] + (iv[2] === 6 ? 'dim' : iv[1] === 3 ? 'm' : '');
+}
+const SOL = {C:'Do', D:'Re', E:'Mi', F:'Fa', G:'Sol', A:'La', B:'Si'};
+const lab = m => chordName(m) + (SOL[NOTE[((m % 12) + 12) % 12]] ? '  ·  ' + SOL[NOTE[((m % 12) + 12) % 12]] : '');
+function buildNotes(){
+  const iv = SCALES[S.scale], b = base(), out = [];
+  for(let o = 0; o < S.octs; o++) for(const i of iv) out.push(b + 12 * o + i);
+  out.push(b + 12 * S.octs);
+  return out;
+}
+let notes = buildNotes(), cur = -1, flash = 0, lastShown = -2;
+function renderPieces(){
+  const N = notes.length, act = cur >= 0 ? N - 1 - cur : -1, f2 = x => x.toFixed(2).replace('.', ',');
+  $('pieces').innerHTML = '<div>f(h) =</div>' + notes.map((m, k) => {
+    const nmx = S.play === 'single' ? nm(m) : chordName(m);
+    return '<div class="pr' + (k === act ? ' on' : '') + '"><span>' + (k === act ? '▶ ' : '') + nmx + '</span><span>untuk ' + f2(k / N) + ' ≤ h ' + (k === N - 1 ? '≤' : '<') + ' ' + f2((k + 1) / N) + '</span></div>';
+  }).join('');
+}
+function rebuild(){ notes = buildNotes(); cur = -1; lastShown = -2; renderPieces(); }
+
+/* Audio */
+let ac, master, amp, filt, voices = [];
+function initAudio(){
+  if(ac){ if(ac.state === 'suspended') ac.resume(); return; }
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  master = ac.createGain(); master.gain.value = S.vol / 100;
+  amp = ac.createGain(); amp.gain.value = 0;
+  filt = ac.createBiquadFilter(); filt.type = 'lowpass'; filt.Q.value = 1; filt.frequency.value = 2600;
+  const mix = ac.createGain(); mix.gain.value = 0.5;
+  for(let i = 0; i < 3; i++){
+    const g = ac.createGain(); g.gain.value = 0;
+    const a = ac.createOscillator(), b = ac.createOscillator();
+    a.type = b.type = S.wave;
+    a.connect(g); b.connect(g); g.connect(mix); a.start(); b.start();
+    voices.push({a, b, g});
+  }
+  mix.connect(filt); filt.connect(amp);
+  const delay = ac.createDelay(1); delay.delayTime.value = 0.28;
+  const fb = ac.createGain(); fb.gain.value = 0.35;
+  const wet = ac.createGain(); wet.gain.value = 0.15;
+  amp.connect(master); amp.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(master);
+  master.connect(ac.destination);
+}
+function setPitch(m){
+  if(!ac) return;
+  const iv = chordFor(m), tc = GLIDE_MS / 3000, lv = iv.length === 1 ? 1 : .62;
+  voices.forEach((v, i) => {
+    if(i < iv.length){ const f = hz(m + iv[i]); v.a.frequency.setTargetAtTime(f, ac.currentTime, tc); v.b.frequency.setTargetAtTime(f, ac.currentTime, tc); }
+    v.g.gain.setTargetAtTime(i < iv.length ? lv : 0, ac.currentTime, .02);
+  });
+}
+
+/* Kontrol panel */
+const selScale = $('scale'), selRoot = $('root');
+Object.keys(SCALES).forEach(k => selScale.add(new Option(k, k)));
+NOTE.forEach((n, i) => selRoot.add(new Option(n, i)));
+selScale.value = S.scale; selRoot.value = S.root; $('wave').value = S.wave;
+selScale.addEventListener('change', () => { S.scale = selScale.value; rebuild(); });
+selRoot.addEventListener('change', () => { S.root = +selRoot.value; rebuild(); });
+$('wave').addEventListener('change', e => { S.wave = e.target.value; voices.forEach(v => { v.a.type = v.b.type = S.wave; }); });
+$('fist').addEventListener('change', e => { S.fist = e.target.value === '1'; });
+$('play').addEventListener('change', e => { S.play = e.target.value; renderPieces(); lastShown = -2; if(cur >= 0) setPitch(notes[notes.length - 1 - cur]); });
+function bind(id, fmt, fn){
+  const el = $(id), out = $(id + 'Out');
+  const upd = () => { S[id] = +el.value; out.textContent = fmt(S[id]); if(fn) fn(); };
+  el.addEventListener('input', upd); upd();
+}
+bind('octs', v => v + ' oktaf', rebuild);
+bind('vol', v => v + '%', () => { if(master) master.gain.setTargetAtTime(S.vol / 100, ac.currentTime, 0.02); });
+
+/* Masukan */
+const stage = $('stage'), cam = $('cam');
+const inp = {present:false, hold:false, x:.5, y:.5, open:1, closed:false, t:0, ttl:250};
+const sm = {x:.5, y:.5, open:1};
+let lm = null, fist = false, wasPresent = false, W = 0, H = 0, dpr = 1, notice = '', noticeUntil = 0;
+const trail = [];
+function setNotice(t, ms){ notice = t; noticeUntil = performance.now() + (ms || 6000); }
+function setStatus(t){ $('status').textContent = t; }
+
+stage.addEventListener('pointerdown', e => {
+  if(S.mode !== 'ptr') return;
+  stage.setPointerCapture(e.pointerId); pointerAt(e); inp.present = true; inp.hold = true; inp.open = 1; inp.ttl = 250;
+});
+stage.addEventListener('pointermove', e => { if(S.mode === 'ptr' && inp.hold) pointerAt(e); });
+['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, () => { if(S.mode === 'ptr'){ inp.present = false; inp.hold = false; } }));
+function pointerAt(e){
+  const r = stage.getBoundingClientRect();
+  inp.x = (e.clientX - r.left) / r.width; inp.y = (e.clientY - r.top) / r.height; inp.t = performance.now();
+}
+function toStage(nx, ny){
+  const vw = cam.videoWidth || 640, vh = cam.videoHeight || 480;
+  const sc = Math.max(W / vw, H / vh), ox = (W - vw * sc) / 2, oy = (H - vh * sc) / 2;
+  return {x:(W - (nx * vw * sc + ox)) / W, y:(ny * vh * sc + oy) / H};
+}
+const LINKS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function onResults(res){
+  const L = res.multiHandLandmarks && res.multiHandLandmarks[0];
+  if(!L){ inp.present = false; lm = null; fist = false; return; }
+  const vw = cam.videoWidth, vh = cam.videoHeight;
+  lm = L.map(p => toStage(p.x, p.y));
+  const palm = [0,5,9,13,17];
+  const cx = palm.reduce((s, i) => s + lm[i].x, 0) / palm.length;
+  const cy = palm.reduce((s, i) => s + lm[i].y, 0) / palm.length;
+  const d = (a, b) => Math.hypot((L[a].x - L[b].x) * vw, (L[a].y - L[b].y) * vh);
+  const open = Math.min(1, Math.max(0, (d(4, 8) / d(0, 9) - 0.12) / 0.7));
+  const tipR = [[8,5],[12,9],[16,13],[20,17]].reduce((a, [t, m]) => a + d(t, 0) / d(m, 0), 0) / 4;
+  fist = fist ? tipR < 1.45 : tipR < 1.2;
+  inp.closed = fist;
+  inp.present = true; inp.hold = false; inp.x = cx; inp.y = cy; inp.open = open; inp.t = performance.now(); inp.ttl = 250;
+}
+
+/* Pelacak gerak */
+const MW = 80, MH = 60;
+const mc = document.createElement('canvas'); mc.width = MW; mc.height = MH;
+const mx = mc.getContext('2d', {willReadFrequently:true});
+let gPrev = new Float32Array(MW * MH), gCur = new Float32Array(MW * MH), gHave = false;
+function motionStep(){
+  if(cam.readyState < 2) return;
+  mx.drawImage(cam, 0, 0, MW, MH);
+  const d = mx.getImageData(0, 0, MW, MH).data, n = MW * MH;
+  for(let i = 0; i < n; i++) gCur[i] = d[4 * i] * .3 + d[4 * i + 1] * .59 + d[4 * i + 2] * .11;
+  if(gHave){
+    let sx = 0, sy = 0, c = 0;
+    for(let i = 0; i < n; i++) if(Math.abs(gCur[i] - gPrev[i]) > 26){ sx += i % MW; sy += (i / MW) | 0; c++; }
+    if(c > 40){
+      const p = toStage(sx / c / MW, sy / c / MH);
+      inp.present = true; inp.hold = false; inp.closed = false; inp.x = p.x; inp.y = p.y; inp.open = 1; inp.t = performance.now(); inp.ttl = 700; lm = null;
+    }
+  }
+  const tmp = gPrev; gPrev = gCur; gCur = tmp; gHave = true;
+}
+
+/* MediaPipe */
+const BASES = ['https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/'];
+let hands = null, lastHandsErr = '';
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.crossOrigin = 'anonymous'; s.onload = res; s.onerror = () => rej(new Error('gagal memuat skrip'));
+    document.head.appendChild(s);
+  });
+}
+async function loadHands(){
+  if(hands) return true;
+  for(const b of BASES){
+    try{
+      if(typeof Hands === 'undefined') await loadScript(b + 'hands.js');
+      const h = new Hands({locateFile: f => b + f});
+      h.setOptions({maxNumHands:1, modelComplexity:1, minDetectionConfidence:.6, minTrackingConfidence:.5});
+      h.onResults(onResults);
+      await Promise.race([h.initialize(), new Promise((_, rej) => setTimeout(() => rej(new Error('waktu habis')), 30000))]);
+      hands = h; lastHandsErr = ''; return true;
+    }catch(e){ lastHandsErr = (e && e.message) || 'error'; }
+  }
+  return false;
+}
+
+/* Kamera */
+let stream = null, busy = false, loopOn = false;
+function describeError(e){
+  const n = (e && e.name) || '';
+  if(n === 'NotAllowedError' || n === 'PermissionDeniedError') return 'Izin kamera ditolak. Klik ikon kamera atau gembok di address bar, pilih Izinkan, lalu tekan tombol lagi.';
+  if(n === 'NotFoundError' || n === 'DevicesNotFoundError') return 'Tidak ada kamera yang terdeteksi di perangkat ini.';
+  if(n === 'NotReadableError' || n === 'TrackStartError') return 'Kamera sedang dipakai aplikasi lain. Tutup dulu lalu coba lagi.';
+  if(n === 'SecurityError') return 'Browser memblokir kamera di halaman ini. Buka langsung di Chrome atau Edge.';
+  return 'Kamera gagal dibuka (' + (n || 'error') + (e && e.message ? ': ' + e.message : '') + ').';
+}
+async function openStream(deviceId){
+  if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const tries = deviceId ? [{video:{deviceId:{exact:deviceId}}, audio:false}]
+    : [{video:{width:{ideal:1280}, height:{ideal:720}, facingMode:'user'}, audio:false}, {video:{facingMode:'user'}, audio:false}, {video:true, audio:false}];
+  let err = null;
+  for(const c of tries){
+    try{ stream = await navigator.mediaDevices.getUserMedia(c); break; }
+    catch(e){ err = e; if(['NotAllowedError','SecurityError','NotFoundError','NotReadableError'].includes(e.name)) break; }
+  }
+  if(!stream) throw err;
+  cam.srcObject = stream; await cam.play(); gHave = false;
+  await listCams();
+}
+async function listCams(){
+  try{
+    const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const sel = $('camdev');
+    if(ds.length > 1){
+      const t = stream && stream.getVideoTracks()[0], curId = t && t.getSettings().deviceId;
+      sel.innerHTML = '';
+      ds.forEach((d, i) => sel.add(new Option(d.label || ('Kamera ' + (i + 1)), d.deviceId)));
+      if(curId) sel.value = curId;
+      $('camRow').hidden = false;
+    } else $('camRow').hidden = true;
+  }catch(e){}
+}
+$('camdev').addEventListener('change', async e => {
+  try{ await openStream(e.target.value); }catch(err){ setNotice(describeError(err), 8000); }
+});
+
+async function diagnose(){
+  const L = [];
+  L.push('Alamat: ' + location.protocol + '//' + (location.host || '(file lokal)'));
+  L.push('Konteks aman: ' + (window.isSecureContext ? 'ya' : 'TIDAK'));
+  L.push('Di dalam frame: ' + (window.top !== window.self ? 'YA (kamera biasanya diblokir)' : 'tidak'));
+  const api = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  L.push('API kamera: ' + (api ? 'ada' : 'TIDAK ADA'));
+  try{
+    const p = await navigator.permissions.query({name:'camera'});
+    L.push('Izin kamera: ' + ({granted:'diizinkan', denied:'DITOLAK', prompt:'belum ditanya'}[p.state] || p.state));
+  }catch(e){ L.push('Izin kamera: tidak terbaca oleh browser ini'); }
+  try{
+    const d = await navigator.mediaDevices.enumerateDevices();
+    L.push('Kamera terdeteksi: ' + d.filter(x => x.kind === 'videoinput').length);
+  }catch(e){}
+  L.push('Pelacak tangan: ' + (hands ? 'termuat' : (lastHandsErr ? 'gagal (' + lastHandsErr + ')' : 'belum dimuat')));
+  return {text: L.join('\n'), problem: !window.isSecureContext || !api || window.top !== window.self};
+}
+async function showDiag(open){
+  const r = await diagnose();
+  $('diag').textContent = r.text;
+  if(open || r.problem) $('diagBox').open = true;
+  return r;
+}
+$('diagBtn').addEventListener('click', () => showDiag(true));
+
+async function startCamera(){
+  const msg = $('introMsg');
+  msg.textContent = 'Meminta izin kamera…';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg.textContent = 'Browser memblokir kamera untuk halaman ini. Lihat diagnosis di bawah.';
+    await showDiag(true); return false;
+  }
+  if(!stream || !stream.active){
+    try{ await openStream(); }catch(e){ msg.textContent = describeError(e); await showDiag(true); return false; }
+  }
+  if(S.tracker === 'hands' && !hands){
+    msg.textContent = 'Memuat model tangan…'; setStatus('Memuat model tangan…');
+    const ok = await loadHands();
+    if(!ok){
+      S.tracker = 'motion'; $('tracker').value = 'motion';
+      setNotice('Model tangan tidak bisa dimuat, memakai pelacak gerak. Lambaikan tangan di depan kamera.', 9000);
+    }
+  }
+  msg.textContent = '';
+  return true;
+}
+$('tracker').addEventListener('change', async e => {
+  S.tracker = e.target.value;
+  if(S.tracker === 'hands' && !hands && S.mode === 'cam'){
+    setNotice('Memuat model tangan…', 30000);
+    const ok = await loadHands();
+    if(!ok){ S.tracker = 'motion'; e.target.value = 'motion'; setNotice('Model tangan gagal dimuat, tetap memakai pelacak gerak.', 8000); }
+    else setNotice('Model tangan siap.', 3000);
+  }
+  inp.present = false; lm = null;
+});
+function startDetect(){
+  if(loopOn) return; loopOn = true;
+  const tick = async () => {
+    if(S.mode !== 'cam'){ loopOn = false; return; }
+    if(S.tracker === 'hands' && hands){
+      if(!busy && cam.readyState >= 2){ busy = true; try{ await hands.send({image:cam}); }catch(e){} busy = false; }
+    } else if(S.tracker === 'motion') motionStep();
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+async function setMode(m){
+  if(m === 'cam'){ const ok = await startCamera(); if(!ok){ $('intro').hidden = false; return; } }
+  S.mode = m; inp.present = false; inp.hold = false; inp.closed = false; lm = null;
+  $('modeCam').setAttribute('aria-pressed', m === 'cam');
+  $('modePtr').setAttribute('aria-pressed', m === 'ptr');
+  cam.style.visibility = m === 'cam' ? 'visible' : 'hidden';
+  stage.style.cursor = m === 'ptr' ? 'crosshair' : 'default';
+  $('intro').hidden = true;
+  stage.classList.toggle('cam', m === 'cam');
+  if(m === 'cam') startDetect();
+}
+const go = m => () => { initAudio(); setMode(m); };
+$('startCam').addEventListener('click', go('cam'));
+$('startPtr').addEventListener('click', go('ptr'));
+$('modeCam').addEventListener('click', go('cam'));
+$('modePtr').addEventListener('click', go('ptr'));
+
+function stepFrom(p, N){
+  if(cur >= 0 && p >= cur - STAB && p <= cur + 1 + STAB) return cur;
+  return Math.min(N - 1, Math.max(0, Math.floor(p)));
+}
+
+/* Gambar */
+const cs = getComputedStyle(document.documentElement);
+const ACC = cs.getPropertyValue('--accent').trim(), HAND = cs.getPropertyValue('--hand').trim();
+const MUTED = cs.getPropertyValue('--muted').trim(), LINE = 'rgba(130,150,210,.3)';
+const fx = $('fx'), g = fx.getContext('2d'), plot = $('plot');
+const FONT = "'Winky Sans',system-ui,sans-serif";
+if(document.fonts && document.fonts.load){ document.fonts.load("700 18px 'Winky Sans'").catch(() => {}); }
+const hue = (k, N) => 265 - 225 * (k / Math.max(1, N - 1));   // rendah = ungu, tinggi = kuning
+
+function fit(){
+  const r = stage.getBoundingClientRect();
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+  if(fx.width !== w || fx.height !== h){ fx.width = w; fx.height = h; }
+  W = r.width; H = r.height;
+}
+function rr(c, x, y, w, h, r){ c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
+
+function drawPlot(hLive, present){
+  const w = Math.round(plot.clientWidth * dpr), h = Math.round(plot.clientHeight * dpr);
+  if(plot.width !== w || plot.height !== h){ plot.width = w; plot.height = h; }
+  const q = plot.getContext('2d'); q.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cw = w / dpr, ch = h / dpr; q.clearRect(0, 0, cw, ch);
+  const pl = 34, pr = 10, pt = 10, pb = 20, iw = cw - pl - pr, ih = ch - pt - pb;
+  const N = notes.length, lo = notes[0] - 1, hi = notes[N - 1] + 1;
+  const X = v => pl + v * iw, Y = m => pt + (1 - (m - lo) / (hi - lo)) * ih;
+  q.strokeStyle = LINE; q.lineWidth = 1; q.strokeRect(pl + .5, pt + .5, iw, ih);
+  q.setLineDash([4, 4]); q.strokeStyle = MUTED; q.beginPath();
+  q.moveTo(X(0), Y(notes[0])); q.lineTo(X(1), Y(notes[N - 1])); q.stroke(); q.setLineDash([]);
+  q.strokeStyle = ACC; q.lineWidth = 2; q.lineJoin = 'round'; q.shadowColor = ACC; q.shadowBlur = 8; q.beginPath();
+  for(let k = 0; k < N; k++){
+    const x0 = X(k / N), x1 = X((k + 1) / N), y = Y(notes[k]);
+    if(k) q.lineTo(x0, y); else q.moveTo(x0, y);
+    q.lineTo(x1, y);
+  }
+  q.stroke(); q.shadowBlur = 0;
+  if(cur >= 0){
+    const k = N - 1 - cur, hx = hLive == null ? (k + .5) / N : hLive;
+    q.fillStyle = present ? HAND : MUTED; q.beginPath(); q.arc(X(hx), Y(notes[k]), 5, 0, 7); q.fill();
+  }
+  q.fillStyle = MUTED; q.font = '700 14px ' + FONT; q.textBaseline = 'middle';
+  q.textAlign = 'right'; q.fillText(nm(notes[N - 1]), pl - 5, Y(notes[N - 1])); q.fillText(nm(notes[0]), pl - 5, Y(notes[0]));
+  q.textAlign = 'center'; q.textBaseline = 'alphabetic';
+  q.fillText('0', X(0), ch - 5); q.fillText('1', X(1), ch - 5); q.fillText('tinggi tangan h', X(.5), ch - 5);
+}
+
+let liveLast = '';
+function frame(){
+  fit(); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const N = notes.length, top = H * .06, span = H * .88, bh = span / N, now = performance.now(), b = base();
+
+  const present = inp.present && (inp.hold || now - inp.t < inp.ttl);
+  if(present && !wasPresent){ sm.x = inp.x; sm.y = inp.y; sm.open = inp.open; }
+  wasPresent = present;
+  const closed = present && S.fist && S.mode === 'cam' && inp.closed, sound = present && !closed;
+
+  let hLive = null;
+  if(present){
+    sm.x += (inp.x - sm.x) * .5; sm.y += (inp.y - sm.y) * .5; sm.open += (inp.open - sm.open) * .3;
+    const p = Math.min(N - 1e-4, Math.max(0, (sm.y * H - top) / span * N));
+    hLive = closed ? null : 1 - p / N;
+    if(!closed){
+      const idx = stepFrom(p, N);
+      if(idx !== cur){ cur = idx; setPitch(notes[N - 1 - idx]); flash = 1; }
+    }
+    if(sound){ trail.push({x:sm.x * W, y:sm.y * H, a:1}); if(trail.length > 24) trail.shift(); }
+  }
+  if(ac){
+    amp.gain.setTargetAtTime(sound ? .5 : 0, ac.currentTime, sound ? .03 : (closed ? .05 : .15));
+  }
+
+  g.textBaseline = 'middle';
+  const showInt = bh >= 17 && W > 520, pad = 10;
+  const cm = S.mode === 'cam', run = W * .45, dx = N > 1 ? run / (N - 1) : 0;
+  const tShadow = () => { if(cm){ g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = 5; } };
+  for(let i = 0; i < N; i++){
+    const k = N - 1 - i, midi = notes[k], y = top + i * bh, isRoot = (midi - b) % 12 === 0, hu = hue(k, N);
+    const active = i === cur, x0 = pad + k * dx, bw = W - pad - x0, rad = Math.min(8, bh / 2), bhh = Math.max(2, bh - 2);
+    /* zona sentuh samar selebar layar */
+    g.fillStyle = 'hsla(' + hu + ',85%,60%,' + (active ? .18 : .07) + ')';
+    rr(g, pad, y + 1, W - pad * 2, Math.max(2, bh - 3), rad); g.fill();
+    /* balok anak tangga */
+    g.save();
+    if(active && sound){ g.shadowColor = 'hsl(' + hu + ',90%,60%)'; g.shadowBlur = 24; }
+    const L = cm ? 36 : 66;
+    g.fillStyle = 'hsla(' + hu + ',75%,' + (active ? L + 10 : L) + '%,' + (active ? .95 : (isRoot ? .85 : .7)) + ')';
+    rr(g, x0, y + 1, bw, bhh, [rad, 0, 0, rad]); g.fill();
+    if(active){ g.strokeStyle = cm ? '#ffffff' : '#111a38'; g.lineWidth = 2; g.stroke(); }
+    g.restore();
+    if(bh >= 8){
+      g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(x0 + rad, y + 1, Math.max(0, bw - rad - 2), 2.5);
+      g.fillStyle = 'rgba(20,30,60,.35)'; g.fillRect(x0, y + 1 + rad, 2, Math.max(0, bhh - rad * 2));
+    }
+    if(bh >= 17){
+      g.save(); tShadow();
+      g.font = '700 16px ' + FONT; g.textAlign = 'left';
+      g.fillStyle = cm ? '#ffffff' : '#111a38';
+      g.fillText(lab(midi), x0 + 14, y + bh / 2);
+      g.restore();
+    }
+    if(showInt && bw > 230){
+      g.save(); tShadow();
+      g.font = '700 14px ' + FONT; g.textAlign = 'right'; g.fillStyle = cm ? '#ffffff' : '#111a38';
+      g.fillText('h dari ' + (k / N).toFixed(2) + ' sampai ' + ((k + 1) / N).toFixed(2), W - pad - 12, y + bh / 2);
+      g.restore();
+    }
+  }
+  g.textAlign = 'left';
+
+  for(let i = 0; i < trail.length; i++){
+    const t = trail[i]; t.a *= .9;
+    g.fillStyle = 'rgba(15,168,150,' + (t.a * .5).toFixed(3) + ')'; g.beginPath(); g.arc(t.x, t.y, 2 + 6 * t.a, 0, 7); g.fill();
+  }
+  if(!present && trail.length) trail.shift();
+
+  if(present && cur >= 0){
+    const rx = sm.x * W, ry = sm.y * H, sy = top + (cur + .5) * bh, hu = hue(N - 1 - cur, N);
+    const sx = Math.min(W - pad - 14, Math.max(rx, pad + (N - 1 - cur) * dx + 16));
+    g.strokeStyle = 'rgba(27,35,64,.35)'; g.lineWidth = 1; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(rx, ry); g.lineTo(sx, sy); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = closed ? '#ff6b9d' : HAND; g.lineWidth = 2; g.shadowColor = g.strokeStyle; g.shadowBlur = 14; g.beginPath(); g.arc(rx, ry, closed ? 7 : 11, 0, 7); g.stroke(); g.shadowBlur = 0;
+    g.globalAlpha = closed ? .3 : 1; g.fillStyle = 'hsl(' + hu + ',90%,65%)'; g.shadowColor = g.fillStyle; g.shadowBlur = 18; g.beginPath(); g.arc(sx, sy, 8, 0, 7); g.fill(); g.shadowBlur = 0; g.globalAlpha = 1;
+    if(flash > .02){
+      g.strokeStyle = 'rgba(27,35,64,' + flash.toFixed(2) + ')'; g.lineWidth = 2;
+      g.beginPath(); g.arc(sx, sy, 8 + (1 - flash) * 34, 0, 7); g.stroke();
+    }
+  }
+  flash *= .9;
+
+  if(lm && present && S.mode === 'cam' && S.tracker === 'hands'){
+    g.strokeStyle = closed ? 'rgba(255,107,157,.7)' : 'rgba(15,168,150,.85)'; g.lineWidth = 2; g.beginPath();
+    LINKS.forEach(([a, c]) => { g.moveTo(lm[a].x * W, lm[a].y * H); g.lineTo(lm[c].x * W, lm[c].y * H); });
+    g.stroke(); g.fillStyle = closed ? '#ff6b9d' : HAND;
+    lm.forEach(p => { g.beginPath(); g.arc(p.x * W, p.y * H, 3, 0, 7); g.fill(); });
+  }
+
+  if(cur !== lastShown){
+    lastShown = cur; renderPieces();
+    if(cur >= 0){
+      const k = N - 1 - cur, m = notes[k];
+      $('readNote').textContent = chordName(m);
+      $('readInfo').textContent = S.play === 'single' ? 'frekuensi ' + hz(m).toFixed(1) + ' Hz' : chordFor(m).map(i => nm(m + i)).join(' + ');
+    } else { $('readNote').textContent = '—'; $('readInfo').textContent = 'Angkat tangan untuk mulai'; }
+  }
+
+  let live;
+  if(cur < 0) live = 'Angkat tangan untuk melihat hitungannya di sini.';
+  else {
+    const k = N - 1 - cur, m = notes[k], a = k / N, c = (k + 1) / N, hh = hLive != null ? hLive : (a + c) / 2, f2 = x => x.toFixed(2).replace('.', ',');
+    live = 'Tanganmu: h = ' + f2(hh) + '\nCari baris: ' + f2(a) + ' ≤ h < ' + f2(c) + (hh >= a && hh < c ? '  ✓' : '  (ditahan di tepi)') +
+      '\nJadi f(h) = ' + (S.play === 'single' ? nm(m) : chordName(m) + '  (' + chordFor(m).map(i => nm(m + i)).join(' + ') + ')');
+  }
+  if(closed) live += '\nTangan dikepal: suara mati, nada dikunci.';
+  if(live !== liveLast){ liveLast = live; $('live').textContent = live; }
+
+  if(now < noticeUntil) setStatus(notice);
+  else if(S.mode) setStatus(closed ? 'Tangan dikepal · hening, nada dikunci' : present ? (S.mode === 'cam' ? (S.tracker === 'hands' ? 'Tangan terdeteksi' : 'Gerakan terdeteksi') : 'Memainkan') :
+    (S.mode === 'cam' ? (S.tracker === 'hands' ? 'Mencari tangan…' : 'Menunggu gerakan…') : 'Tekan dan geser di panggung'));
+
+  drawPlot(hLive, sound);
+  requestAnimationFrame(frame);
+}
+rebuild();
+requestAnimationFrame(frame);
+showDiag(false).then(r => {
+  if(r.problem) $('introMsg').textContent = 'Kamera kemungkinan diblokir di sini. Lihat diagnosis di bawah, atau buka file ini langsung di Chrome atau Edge.';
+});
+})();
+</script>
+</body>
+</html>
